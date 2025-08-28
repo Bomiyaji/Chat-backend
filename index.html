@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simple Chat</title>
+  <style>
+    body {
+      margin:0; padding:0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+    }
+    .container {
+      max-width: 400px; margin: 80px auto;
+      background: #fff; padding: 30px; border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align:center;
+    }
+    h2 { margin-bottom:20px; color:#333; }
+    input {
+      width: 90%; padding: 12px; margin: 10px 0;
+      border: 1px solid #ccc; border-radius: 8px;
+    }
+    button {
+      width: 95%; padding: 12px; margin-top: 15px;
+      border:none; border-radius: 8px;
+      background: #4CAF50; color: #fff; font-size: 16px;
+      cursor: pointer; transition: background 0.3s;
+    }
+    button:hover { background: #43a047; }
+    #chat {
+      display:none;
+      max-width: 600px; margin:20px auto;
+      background:#fff; padding:20px; border-radius:12px;
+      box-shadow:0 4px 20px rgba(0,0,0,0.1);
+    }
+    #messages {
+      height: 350px; overflow-y:auto;
+      border: 1px solid #ddd; padding: 12px; margin-bottom: 15px;
+      border-radius: 8px;
+      background:#fafafa;
+    }
+    .msg { padding:6px 8px; margin:4px 0; border-radius:6px; }
+    .me { background:#d1f5d3; text-align:right; }
+    .other { background:#e6e6e6; text-align:left; }
+    .info { text-align:center; color:#666; font-style:italic; }
+  </style>
+</head>
+<body>
+
+  <!-- Login Form -->
+  <div class="container" id="login-box">
+    <h2>🚀 Enter Chat</h2>
+    <input type="text" id="username" placeholder="Enter username" />
+    <button onclick="login()">Join Chat</button>
+  </div>
+
+  <!-- Chat UI -->
+  <div id="chat">
+    <h3 id="chat-title"></h3>
+    <div id="messages"></div>
+    <input id="msgBox" placeholder="Type a message..." onkeydown="if(event.key==='Enter'){sendMsg();}"/>
+    <button onclick="sendMsg()">Send</button>
+  </div>
+
+  <script>
+    let ws, currentUser;
+    const WS_HOST = "wss://your-app.onrender.com"; // Render वाले backend का URL डालना है
+
+    function login(){
+      const username = document.getElementById("username").value.trim();
+      if(!username) return alert("Please enter a username");
+
+      currentUser = username;
+      document.getElementById("login-box").style.display = "none";
+      document.getElementById("chat").style.display = "block";
+      document.getElementById("chat-title").innerText = `Chatting as: ${username}`;
+
+      ws = new WebSocket(WS_HOST);
+      ws.onopen = () => {
+        ws.send(JSON.stringify({cmd:"join", nick:username}));
+        addMsg("Connected to server ✅","info");
+      };
+      ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if(data.cmd === "chat"){
+          const type = data.nick === currentUser ? "me" : "other";
+          addMsg(`${data.nick}: ${data.text}`, type);
+        }
+        if(data.cmd === "info") addMsg(`ℹ️ ${data.text}`, "info");
+      };
+      ws.onclose = () => addMsg("❌ Disconnected","info");
+    }
+
+    function sendMsg(){
+      const box = document.getElementById("msgBox");
+      if(box.value && ws){
+        ws.send(JSON.stringify({cmd:"chat", text:box.value}));
+        addMsg(`${currentUser}: ${box.value}`, "me");
+        box.value="";
+      }
+    }
+
+    function addMsg(msg, type="other"){
+      const m = document.createElement("div");
+      m.className = "msg " + type;
+      m.innerText = msg;
+      document.getElementById("messages").appendChild(m);
+      document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+    }
+  </script>
+</body>
+</html>
