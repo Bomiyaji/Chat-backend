@@ -1,113 +1,87 @@
+<!-- =============================
+ ULTRA CHAT — index.html
+ Structure only (styles in style.css, logic in main.js)
+============================= -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Simple Chat</title>
-  <style>
-    body {
-      margin:0; padding:0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f0f2f5;
-    }
-    .container {
-      max-width: 400px; margin: 80px auto;
-      background: #fff; padding: 30px; border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      text-align:center;
-    }
-    h2 { margin-bottom:20px; color:#333; }
-    input {
-      width: 90%; padding: 12px; margin: 10px 0;
-      border: 1px solid #ccc; border-radius: 8px;
-    }
-    button {
-      width: 95%; padding: 12px; margin-top: 15px;
-      border:none; border-radius: 8px;
-      background: #4CAF50; color: #fff; font-size: 16px;
-      cursor: pointer; transition: background 0.3s;
-    }
-    button:hover { background: #43a047; }
-    #chat {
-      display:none;
-      max-width: 600px; margin:20px auto;
-      background:#fff; padding:20px; border-radius:12px;
-      box-shadow:0 4px 20px rgba(0,0,0,0.1);
-    }
-    #messages {
-      height: 350px; overflow-y:auto;
-      border: 1px solid #ddd; padding: 12px; margin-bottom: 15px;
-      border-radius: 8px;
-      background:#fafafa;
-    }
-    .msg { padding:6px 8px; margin:4px 0; border-radius:6px; }
-    .me { background:#d1f5d3; text-align:right; }
-    .other { background:#e6e6e6; text-align:left; }
-    .info { text-align:center; color:#666; font-style:italic; }
-  </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ULTRA CHAT – Cyber • Kawaii • Party</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
+  <!-- Starfield / BG -->
+  <div class="stars"></div>
 
-  <!-- Login Form -->
-  <div class="container" id="login-box">
-    <h2>🚀 Enter Chat</h2>
-    <input type="text" id="username" placeholder="Enter username" />
-    <button onclick="login()">Join Chat</button>
+  <div class="wrap">
+    <header>
+      <div class="logo">ULTRA CHAT</div>
+      <span class="badge">Cyber • Kawaii • Party</span>
+      <div class="spacer"></div>
+
+      <button id="btnAngel" class="chip">Angel ✨</button>
+      <button id="btnDemon" class="chip">Demon 🔥</button>
+      <button id="btnDefault" class="chip">Default 🌈</button>
+
+      <div class="online">Online: <span id="online">0</span></div>
+    </header>
+
+    <div class="panel">
+      <!-- LEFT: people / leaderboard -->
+      <aside>
+        <div class="users">
+          <h3>People</h3>
+          <div id="userlist"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="scores">
+          <h3>XP • Leaderboard</h3>
+          <div id="board"></div>
+        </div>
+      </aside>
+
+      <!-- RIGHT: chat -->
+      <main>
+        <div id="msgs" class="msgs"></div>
+        <div class="typing" id="typing"></div>
+        <div class="composer">
+          <input id="input" placeholder="Type a message… Try /party /matrix /boom /rose /warp /angel /demon /hack /rain 😀" />
+          <button id="send">Send</button>
+        </div>
+      </main>
+    </div>
   </div>
 
-  <!-- Chat UI -->
-  <div id="chat">
-    <h3 id="chat-title"></h3>
-    <div id="messages"></div>
-    <input id="msgBox" placeholder="Type a message..." onkeydown="if(event.key==='Enter'){sendMsg();}"/>
-    <button onclick="sendMsg()">Send</button>
+  <!-- Gate (username only) -->
+  <div id="gate" class="gate">
+    <div class="card">
+      <h1>Enter your username</h1>
+      <input id="nick" placeholder="e.g. NeonMonk" maxlength="20" />
+      <button id="join">Join Chat</button>
+      <div class="tiny">No sign-up • Global room • Commands: /party /boom /matrix /rose /warp /angel /demon /hack /rain</div>
+    </div>
   </div>
 
-  <script>
-    let ws, currentUser;
-    const WS_HOST = "wss://your-app.onrender.com"; // Render वाले backend का URL डालना है
+  <!-- FX layers -->
+  <canvas id="fx" class="fx"></canvas>
+  <canvas id="matrix" class="matrix"></canvas>
+  <div id="emojiRain" class="emoji-rain"></div>
 
-    function login(){
-      const username = document.getElementById("username").value.trim();
-      if(!username) return alert("Please enter a username");
+  <!-- Sounds (very soft) -->
+  <audio id="ping" preload="auto">
+    <!-- tiny silent-ish mp3 data uri (placeholder) -->
+    <source src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAA" type="audio/mpeg">
+  </audio>
+  <audio id="boom" preload="auto">
+    <source src="data:audio/mp3;base64,//uQZAAAABOOMVERYSHORT" type="audio/mpeg">
+  </audio>
 
-      currentUser = username;
-      document.getElementById("login-box").style.display = "none";
-      document.getElementById("chat").style.display = "block";
-      document.getElementById("chat-title").innerText = `Chatting as: ${username}`;
-
-      ws = new WebSocket(WS_HOST);
-      ws.onopen = () => {
-        ws.send(JSON.stringify({cmd:"join", nick:username}));
-        addMsg("Connected to server ✅","info");
-      };
-      ws.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        if(data.cmd === "chat"){
-          const type = data.nick === currentUser ? "me" : "other";
-          addMsg(`${data.nick}: ${data.text}`, type);
-        }
-        if(data.cmd === "info") addMsg(`ℹ️ ${data.text}`, "info");
-      };
-      ws.onclose = () => addMsg("❌ Disconnected","info");
-    }
-
-    function sendMsg(){
-      const box = document.getElementById("msgBox");
-      if(box.value && ws){
-        ws.send(JSON.stringify({cmd:"chat", text:box.value}));
-        addMsg(`${currentUser}: ${box.value}`, "me");
-        box.value="";
-      }
-    }
-
-    function addMsg(msg, type="other"){
-      const m = document.createElement("div");
-      m.className = "msg " + type;
-      m.innerText = msg;
-      document.getElementById("messages").appendChild(m);
-      document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
-    }
-  </script>
+  <script defer src="./main.js"></script>
 </body>
 </html>
